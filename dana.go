@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/vannleonheart/goutil"
 	"strings"
 	"time"
 )
@@ -19,6 +20,12 @@ func New(config Config) *Client {
 	return &Client{
 		Config: config,
 	}
+}
+
+func GenerateRequestId(length int) string {
+	r := goutil.NewRandomString("")
+
+	return r.WithCharset(goutil.NumCharset).Generate(length)
 }
 
 func (c *Client) SetAccessToken(accessToken *AccessToken) {
@@ -54,7 +61,7 @@ func (c *Client) sign(strToSign string) (*string, error) {
 	}
 
 	h := sha256.New()
-	if _, err := h.Write([]byte(strToSign)); err != nil {
+	if _, err = h.Write([]byte(strToSign)); err != nil {
 		return nil, err
 	}
 
@@ -98,4 +105,10 @@ func (c *Client) encodeRequestData(data interface{}) string {
 	hash.Write(by)
 	str := hex.EncodeToString(hash.Sum(nil))
 	return strings.ToLower(str)
+}
+
+func (c *Client) getChannelId() string {
+	channelId := DefaultChannelId
+
+	return channelId
 }
