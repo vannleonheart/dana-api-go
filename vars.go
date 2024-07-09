@@ -4,12 +4,20 @@ const (
 	DefaultTimezone  = "Asia/Jakarta"
 	TimestampFormat  = "2006-01-02T15:04:05+07:00"
 	DefaultChannelId = "0"
+	DefaultLatitude  = "-6.200000"
+	DefaultLongitude = "106.816666"
+	DefaultMcc       = "412"
 
 	URLAccessToken        = "v1.0/access-token/b2b.htm"
 	URLQuickPay           = "v1.0/quick-pay.htm"
 	URLDirectDebitPayment = "v1.0/debit/payment.htm"
 	URLQueryPayment       = "v1.0/debit/status.htm"
 	URLCancelPayment      = "v1.0/debit/cancel.htm"
+	URLGenerateQRIS       = "v1.0/qr/qr-mpm-generate.htm"
+	URLGetAuthCode        = "v1.0/get-auth-code"
+	URLApplyToken         = "v1.0/access-token/b2b2c.htm"
+	URLApplyOTT           = "v1.0/qr/apply-ott.htm"
+	URLUnbindToken        = "v1.0/registration-account-unbinding.htm"
 
 	CurrencyIDR = "IDR"
 
@@ -52,6 +60,7 @@ type Client struct {
 
 type Config struct {
 	BaseUrl              string  `json:"base_url"`
+	WebUrl               string  `json:"web_url"`
 	MerchantId           string  `json:"merchant_id"`
 	ClientId             string  `json:"client_id"`
 	ClientSecret         string  `json:"client_secret"`
@@ -80,19 +89,6 @@ type AccessToken struct {
 	ExpiresIn   int    `json:"expiresIn"`
 }
 
-type QuickPayRequest struct {
-	PartnerReferenceNo string            `json:"partnerReferenceNo"`
-	MerchantId         string            `json:"merchantId"`
-	SubMerchantId      *string           `json:"subMerchantId,omitempty"`
-	Amount             Money             `json:"amount"`
-	ExternalStoreId    *string           `json:"externalStoreId,omitempty"`
-	ValidUpTo          *string           `json:"validUpTo,omitempty"`
-	Title              string            `json:"title"`
-	UrlParams          *[]UrlParam       `json:"urlParams,omitempty"`
-	PayOtionDetails    []PayOptionDetail `json:"payOptionDetails"`
-	AdditionalInfo     *AdditionalInfo   `json:"additionalInfo,omitempty"`
-}
-
 type QuickPayResponse struct {
 	GeneralResponse
 	PartnerReferenceNo *string `json:"partnerReferenceNo"`
@@ -107,20 +103,6 @@ type QuickPayResponse struct {
 	} `json:"additionalInfo"`
 }
 
-type DirectDebitPaymentRequest struct {
-	PartnerReferenceNo string            `json:"partnerReferenceNo"`
-	MerchantId         string            `json:"merchantId"`
-	SubMerchantId      *string           `json:"subMerchantId,omitempty"`
-	Amount             Money             `json:"amount"`
-	UrlParams          *[]UrlParam       `json:"urlParams,omitempty"`
-	ExternalStoreId    *string           `json:"externalStoreId,omitempty"`
-	ValidUpTo          *string           `json:"validUpTo,omitempty"`
-	PointOfInitiation  *string           `json:"pointOfInitiation,omitempty"`
-	DisabledPayMethods *string           `json:"disabledPayMethods,omitempty"`
-	PayOtionDetails    []PayOptionDetail `json:"payOptionDetails"`
-	AdditionalInfo     *AdditionalInfo   `json:"additionalInfo,omitempty"`
-}
-
 type DirectDebitPaymentResponse struct {
 	GeneralResponse
 	PartnerReferenceNo *string `json:"partnerReferenceNo"`
@@ -128,34 +110,11 @@ type DirectDebitPaymentResponse struct {
 	WebRedirectUrl     *string `json:"webRedirectUrl"`
 }
 
-type CancelPaymentRequest struct {
-	MerchantId                 string  `json:"merchantId"`
-	SubMerchantId              *string `json:"subMerchantId,omitempty"`
-	OriginalPartnerReferenceNo string  `json:"originalPartnerReferenceNo"`
-	OriginalReferenceNo        *string `json:"originalReferenceNo,omitempty"`
-	OriginalExternalId         *string `json:"originalExternalId,omitempty"`
-	Reason                     *string `json:"reason,omitempty"`
-	ExternalStoreId            *string `json:"externalStoreId,omitempty"`
-	Amount                     *Money  `json:"amount,omitempty"`
-}
-
 type CancelPaymentResponse struct {
 	GeneralResponse
 	OriginalPartnerReferenceNo *string `json:"originalPartnerReferenceNo,omitempty"`
 	OriginalReferenceNo        *string `json:"originalReferenceNo,omitempty"`
 	CancelTime                 *string `json:"cancelTime,omitempty"`
-}
-
-type QueryPaymentRequest struct {
-	MerchantId                 string  `json:"merchantId"`
-	ServiceCode                string  `json:"serviceCode"`
-	OriginalPartnerReferenceNo *string `json:"originalPartnerReferenceNo,omitempty"`
-	OriginalReferenceNo        *string `json:"originalReferenceNo,omitempty"`
-	OriginalExternalId         *string `json:"originalExternalId,omitempty"`
-	TransactionDate            *string `json:"transactionDate,omitempty"`
-	Amount                     *Money  `json:"amount,omitempty"`
-	SubMerchantId              *string `json:"subMerchantId,omitempty"`
-	ExternalStoreId            *string `json:"externalStoreId,omitempty"`
 }
 
 type QueryPaymentResponse struct {
@@ -170,9 +129,41 @@ type QueryPaymentResponse struct {
 	Title                      *string `json:"title,omitempty"`
 }
 
+type GenerateQRISRequest struct {
+	MerchantId         string          `json:"merchantId"`
+	SubMerchantId      *string         `json:"subMerchantId,omitempty"`
+	StoreId            *string         `json:"storeId,omitempty"`
+	TerminalId         *string         `json:"terminalId,omitempty"`
+	PartnerReferenceNo string          `json:"partnerReferenceNo "`
+	Amount             Money           `json:"amount,omitempty"`
+	FeeAmount          *Money          `json:"feeAmount,omitempty"`
+	ValidityPeriod     *string         `json:"validityPeriod,omitempty"`
+	AdditionalInfo     *AdditionalInfo `json:"additionalInfo,omitempty"`
+}
+
+type ApplyTokenResponse struct {
+	GeneralResponse
+	AccessToken            string                 `json:"accessToken"`
+	TokenType              string                 `json:"tokenType"`
+	AccessTokenExpiryTime  string                 `json:"accessTokenExpiryTime"`
+	RefreshToken           string                 `json:"refreshToken"`
+	RefreshTokenExpiryTime string                 `json:"refreshTokenExpiryTime"`
+	AdditionalInfo         map[string]interface{} `json:"additionalInfo"`
+}
+
+type ApplyOTTResponse struct {
+	GeneralResponse
+	ResourceType string `json:"resourceType"`
+	Value        string `json:"value"`
+}
+
 type Money struct {
-	Currency string `json:"currency"`
-	Value    string `json:"value"`
+	Currency      string  `json:"currency"`
+	Value         string  `json:"value"`
+	ExternalId    string  `json:"externalId"`
+	ChannelId     string  `json:"channelId"`
+	MerchantId    string  `json:"merchantId"`
+	SubMerchantId *string `json:"subMerchantId"`
 }
 
 type UrlParam struct {
@@ -182,11 +173,12 @@ type UrlParam struct {
 }
 
 type AdditionalInfo struct {
-	ProductCode string  `json:"productCode"`
-	Order       Order   `json:"order,omitempty"`
-	Mcc         string  `json:"mcc"`
-	EnvInfo     EnvInfo `json:"envInfo"`
-	ExtendInfo  *string `json:"extendInfo,omitempty"`
+	ProductCode    *string  `json:"productCode,omitempty"`
+	Order          *Order   `json:"order,omitempty"`
+	Mcc            *string  `json:"mcc,omitempty"`
+	EnvInfo        *EnvInfo `json:"envInfo,omitempty"`
+	ExtendInfo     *string  `json:"extendInfo,omitempty"`
+	TerminalSource *string  `json:"terminalSource,omitempty"`
 }
 
 type Order struct {
@@ -239,7 +231,7 @@ type EnvInfo struct {
 	OSType             *string `json:"osType,omitempty"`
 	AppVersion         *string `json:"appVersion,omitempty"`
 	SDKVersion         *string `json:"sdkVersion,omitempty"`
-	SourcePlatform     string  `json:"sourcePlatform"`
+	SourcePlatform     *string `json:"sourcePlatform,omitempty"`
 	ClientKey          *string `json:"clientKey,omitempty"`
 	OrderTerminalType  string  `json:"orderTerminalType,omitempty"`
 	TerminalType       string  `json:"terminalType"`

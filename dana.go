@@ -22,10 +22,10 @@ func New(config Config) *Client {
 	}
 }
 
-func GenerateRequestId(length int) string {
+func GenerateRequestId(minLength, maxLength int) string {
 	r := goutil.NewRandomString("")
 
-	return r.WithCharset(goutil.NumCharset).Generate(length)
+	return r.WithCharset(goutil.NumCharset).GenerateRange(minLength, maxLength)
 }
 
 func (c *Client) SetAccessToken(accessToken *AccessToken) {
