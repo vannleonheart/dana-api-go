@@ -8,9 +8,9 @@ import (
 
 func (c *Client) DirectDebitPayment(currency, amount, referenceNo, productCode, orderTitle string, mcc *string, paymentOptions *[]map[string]interface{}, urlParams *[]map[string]string) (*DirectDebitPaymentResponse, error) {
 	timestamp := c.getTimestamp()
-	requestId := GenerateRequestId(10, 20)
+	requestId := c.getRequestId(nil)
 
-	currentMcc := DefaultMcc
+	currentMcc := defaultMcc
 	if mcc != nil {
 		currentMcc = *mcc
 	}
@@ -43,10 +43,17 @@ func (c *Client) DirectDebitPayment(currency, amount, referenceNo, productCode, 
 		requestBody["urlParams"] = urlParams
 	}
 
-	encodeRequestBody := c.encodeRequestData(requestBody)
+	encodeRequestBody := EncodeRequestBody(requestBody)
 	strToSign := fmt.Sprintf("%s:%s:%s:%s", http.MethodPost, fmt.Sprintf("/%s", URLDirectDebitPayment), encodeRequestBody, timestamp)
 	signature, err := c.sign(strToSign)
 	if err != nil {
+		c.log("error", map[string]interface{}{
+			"function":     "DirectDebitPayment",
+			"message":      "error when sign request",
+			"error":        err.Error(),
+			"stringToSign": strToSign,
+		})
+
 		return nil, err
 	}
 
@@ -59,27 +66,44 @@ func (c *Client) DirectDebitPayment(currency, amount, referenceNo, productCode, 
 		"CHANNEL-ID":    c.getChannelId(),
 	}
 
-	requestUrl := fmt.Sprintf("%s/%s", c.Config.BaseUrl, URLDirectDebitPayment)
+	requestUrl := fmt.Sprintf("%s/%s", c.Config.ApiUrl, URLDirectDebitPayment)
 
 	var result DirectDebitPaymentResponse
 
 	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+		c.log("error", map[string]interface{}{
+			"function": "DirectDebitPayment",
+			"message":  "error when send http post",
+			"error":    err,
+			"url":      requestUrl,
+			"headers":  requestHeaders,
+			"body":     requestBody,
+		})
+
 		return nil, err
 	}
+
+	c.log("debug", map[string]interface{}{
+		"function": "DirectDebitPayment",
+		"result":   result,
+		"url":      requestUrl,
+		"headers":  requestHeaders,
+		"body":     requestBody,
+	})
 
 	return &result, nil
 }
 
 func (c *Client) QuickPay(currency, amount, referenceNo, productCode, orderTitle string, mcc *string, paymentOptions *[]map[string]interface{}) (*QuickPayResponse, error) {
-	if err := c.EnsureAccessToken(); err != nil {
+	if err := c.EnsureB2BAccessToken(); err != nil {
 		return nil, err
 	}
 
-	accessToken := c.accessToken.AccessToken
+	accessToken := c.b2bAccessToken.AccessToken
 	timestamp := c.getTimestamp()
-	requestId := GenerateRequestId(10, 20)
+	requestId := c.getRequestId(nil)
 
-	currentMcc := DefaultMcc
+	currentMcc := defaultMcc
 	if mcc != nil {
 		currentMcc = *mcc
 	}
@@ -106,10 +130,17 @@ func (c *Client) QuickPay(currency, amount, referenceNo, productCode, orderTitle
 		requestBody["payOptionDetails"] = *paymentOptions
 	}
 
-	encodeRequestBody := c.encodeRequestData(requestBody)
+	encodeRequestBody := EncodeRequestBody(requestBody)
 	strToSign := fmt.Sprintf("%s:%s:%s:%s", http.MethodPost, fmt.Sprintf("/%s", URLQuickPay), encodeRequestBody, timestamp)
 	signature, err := c.sign(strToSign)
 	if err != nil {
+		c.log("error", map[string]interface{}{
+			"function":     "QuickPay",
+			"message":      "error when sign request",
+			"error":        err.Error(),
+			"stringToSign": strToSign,
+		})
+
 		return nil, err
 	}
 
@@ -123,30 +154,54 @@ func (c *Client) QuickPay(currency, amount, referenceNo, productCode, orderTitle
 		"CHANNEL-ID":    c.getChannelId(),
 	}
 
-	requestUrl := fmt.Sprintf("%s/%s", c.Config.BaseUrl, URLQuickPay)
+	requestUrl := fmt.Sprintf("%s/%s", c.Config.ApiUrl, URLQuickPay)
 
 	var result QuickPayResponse
 
 	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+		c.log("error", map[string]interface{}{
+			"function": "QuickPay",
+			"message":  "error when send http post",
+			"error":    err,
+			"url":      requestUrl,
+			"headers":  requestHeaders,
+			"body":     requestBody,
+		})
+
 		return nil, err
 	}
+
+	c.log("debug", map[string]interface{}{
+		"function": "QuickPay",
+		"result":   result,
+		"url":      requestUrl,
+		"headers":  requestHeaders,
+		"body":     requestBody,
+	})
 
 	return &result, nil
 }
 
 func (c *Client) CancelPayment(referenceNo string) (*CancelPaymentResponse, error) {
 	timestamp := c.getTimestamp()
-	requestId := GenerateRequestId(10, 20)
+	requestId := c.getRequestId(nil)
 
 	requestBody := map[string]interface{}{
 		"merchantId":                 c.Config.MerchantId,
 		"originalPartnerReferenceNo": referenceNo,
 	}
 
-	encodeRequestBody := c.encodeRequestData(requestBody)
+	encodeRequestBody := EncodeRequestBody(requestBody)
 	strToSign := fmt.Sprintf("%s:%s:%s:%s", http.MethodPost, fmt.Sprintf("/%s", URLCancelPayment), encodeRequestBody, timestamp)
 	signature, err := c.sign(strToSign)
 	if err != nil {
+		c.log("error", map[string]interface{}{
+			"function":     "CancelPayment",
+			"message":      "error when sign request",
+			"error":        err.Error(),
+			"stringToSign": strToSign,
+		})
+
 		return nil, err
 	}
 
@@ -159,20 +214,37 @@ func (c *Client) CancelPayment(referenceNo string) (*CancelPaymentResponse, erro
 		"CHANNEL-ID":    c.getChannelId(),
 	}
 
-	requestUrl := fmt.Sprintf("%s/%s", c.Config.BaseUrl, URLCancelPayment)
+	requestUrl := fmt.Sprintf("%s/%s", c.Config.ApiUrl, URLCancelPayment)
 
 	var result CancelPaymentResponse
 
 	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+		c.log("error", map[string]interface{}{
+			"function": "CancelPayment",
+			"message":  "error when send http post",
+			"error":    err,
+			"url":      requestUrl,
+			"headers":  requestHeaders,
+			"body":     requestBody,
+		})
+
 		return nil, err
 	}
+
+	c.log("debug", map[string]interface{}{
+		"function": "CancelPayment",
+		"result":   result,
+		"url":      requestUrl,
+		"headers":  requestHeaders,
+		"body":     requestBody,
+	})
 
 	return &result, nil
 }
 
 func (c *Client) QueryPayment(referenceNo string) (*QueryPaymentResponse, error) {
 	timestamp := c.getTimestamp()
-	requestId := GenerateRequestId(10, 20)
+	requestId := c.getRequestId(nil)
 
 	requestBody := map[string]interface{}{
 		"serviceCode":                "00",
@@ -180,10 +252,17 @@ func (c *Client) QueryPayment(referenceNo string) (*QueryPaymentResponse, error)
 		"originalPartnerReferenceNo": referenceNo,
 	}
 
-	encodeRequestBody := c.encodeRequestData(requestBody)
+	encodeRequestBody := EncodeRequestBody(requestBody)
 	strToSign := fmt.Sprintf("%s:%s:%s:%s", http.MethodPost, fmt.Sprintf("/%s", URLQueryPayment), encodeRequestBody, timestamp)
 	signature, err := c.sign(strToSign)
 	if err != nil {
+		c.log("error", map[string]interface{}{
+			"function":     "QueryPayment",
+			"message":      "error when sign request",
+			"error":        err.Error(),
+			"stringToSign": strToSign,
+		})
+
 		return nil, err
 	}
 
@@ -196,20 +275,37 @@ func (c *Client) QueryPayment(referenceNo string) (*QueryPaymentResponse, error)
 		"CHANNEL-ID":    c.getChannelId(),
 	}
 
-	requestUrl := fmt.Sprintf("%s/%s", c.Config.BaseUrl, URLQueryPayment)
+	requestUrl := fmt.Sprintf("%s/%s", c.Config.ApiUrl, URLQueryPayment)
 
 	var result QueryPaymentResponse
 
 	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+		c.log("error", map[string]interface{}{
+			"function": "QueryPayment",
+			"message":  "error when send http post",
+			"error":    err,
+			"url":      requestUrl,
+			"headers":  requestHeaders,
+			"body":     requestBody,
+		})
+
 		return nil, err
 	}
+
+	c.log("debug", map[string]interface{}{
+		"function": "QueryPayment",
+		"result":   result,
+		"url":      requestUrl,
+		"headers":  requestHeaders,
+		"body":     requestBody,
+	})
 
 	return &result, nil
 }
 
 func (c *Client) GenerateQRIS(currency, amount, referenceNo string) (interface{}, error) {
 	timestamp := c.getTimestamp()
-	requestId := GenerateRequestId(10, 20)
+	requestId := c.getRequestId(nil)
 
 	requestBody := map[string]interface{}{
 		"partnerReferenceNo": referenceNo,
@@ -227,13 +323,20 @@ func (c *Client) GenerateQRIS(currency, amount, referenceNo string) (interface{}
 		},
 	}
 
-	encodeRequestBody := c.encodeRequestData(requestBody)
+	encodeRequestBody := EncodeRequestBody(requestBody)
 	strToSign := fmt.Sprintf("%s:%s:%s:%s", http.MethodPost, fmt.Sprintf("/%s", URLGenerateQRIS), encodeRequestBody, timestamp)
-
 	signature, err := c.sign(strToSign)
 	if err != nil {
+		c.log("error", map[string]interface{}{
+			"function":     "GenerateQRIS",
+			"message":      "error when sign request",
+			"error":        err.Error(),
+			"stringToSign": strToSign,
+		})
+
 		return nil, err
 	}
+
 	requestHeaders := map[string]string{
 		"Content-type":  "application/json",
 		"X-TIMESTAMP":   timestamp,
@@ -243,13 +346,30 @@ func (c *Client) GenerateQRIS(currency, amount, referenceNo string) (interface{}
 		"CHANNEL-ID":    c.getChannelId(),
 	}
 
-	requestUrl := fmt.Sprintf("%s/%s", c.Config.BaseUrl, URLGenerateQRIS)
+	requestUrl := fmt.Sprintf("%s/%s", c.Config.ApiUrl, URLGenerateQRIS)
 
 	var result interface{}
 
 	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+		c.log("error", map[string]interface{}{
+			"function": "GenerateQRIS",
+			"message":  "error when send http post",
+			"error":    err,
+			"url":      requestUrl,
+			"headers":  requestHeaders,
+			"body":     requestBody,
+		})
+
 		return nil, err
 	}
+
+	c.log("debug", map[string]interface{}{
+		"function": "GenerateQRIS",
+		"result":   result,
+		"url":      requestUrl,
+		"headers":  requestHeaders,
+		"body":     requestBody,
+	})
 
 	return &result, nil
 }

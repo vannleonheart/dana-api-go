@@ -1,12 +1,11 @@
 package dana
 
 const (
-	DefaultTimezone  = "Asia/Jakarta"
-	TimestampFormat  = "2006-01-02T15:04:05+07:00"
-	DefaultChannelId = "0"
-	DefaultLatitude  = "-6.200000"
-	DefaultLongitude = "106.816666"
-	DefaultMcc       = "412"
+	defaultTimezone  = "Asia/Jakarta"
+	timestampFormat  = "2006-01-02T15:04:05+07:00"
+	defaultDevideId  = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+	defaultChannelId = "0"
+	defaultMcc       = "412"
 
 	URLAccessToken        = "v1.0/access-token/b2b.htm"
 	URLQuickPay           = "v1.0/quick-pay.htm"
@@ -18,6 +17,7 @@ const (
 	URLApplyToken         = "v1.0/access-token/b2b2c.htm"
 	URLApplyOTT           = "v1.0/qr/apply-ott.htm"
 	URLUnbindToken        = "v1.0/registration-account-unbinding.htm"
+	URLBalanceInquiry     = "v1.0/balance-inquiry.htm"
 
 	CurrencyIDR = "IDR"
 
@@ -54,23 +54,44 @@ const (
 )
 
 type Client struct {
-	Config      Config
-	accessToken *AccessToken
+	Config              Config
+	b2bAccessToken      *AccessToken
+	customerAccessToken *AccessToken
+	origin              *string
+	ipAddress           *string
+	lat                 *string
+	lon                 *string
+	requestId           *string
+	deviceId            *string
 }
 
 type Config struct {
-	BaseUrl              string  `json:"base_url"`
-	WebUrl               string  `json:"web_url"`
-	MerchantId           string  `json:"merchant_id"`
-	ClientId             string  `json:"client_id"`
-	ClientSecret         string  `json:"client_secret"`
-	PublicKey            string  `json:"public_key"`
-	PrivateKey           string  `json:"private_key"`
-	FinishPaymentUrl     *string `json:"finish_payment_url"`
-	FinishRefundUrl      *string `json:"finish_refund_url"`
-	FinishPaymentCodeUrl *string `json:"finish_payment_code_url"`
-	FinishRedirectUrl    *string `json:"finish_redirect_url"`
-	Timezone             *string `json:"timezone"`
+	ApiUrl               string     `json:"api_url"`
+	WebUrl               string     `json:"web_url"`
+	MerchantId           string     `json:"merchant_id"`
+	ClientId             string     `json:"client_id"`
+	ClientSecret         string     `json:"client_secret"`
+	PublicKey            string     `json:"public_key"`
+	PrivateKey           string     `json:"private_key"`
+	FinishPaymentUrl     string     `json:"finish_payment_url"`
+	FinishRefundUrl      string     `json:"finish_refund_url"`
+	FinishPaymentCodeUrl string     `json:"finish_payment_code_url"`
+	FinishRedirectUrl    string     `json:"finish_redirect_url"`
+	Timezone             string     `json:"timezone"`
+	Origin               string     `json:"origin"`
+	IpAddress            string     `json:"ip_address"`
+	Latitude             string     `json:"latitude"`
+	Longitude            string     `json:"longitude"`
+	Log                  *LogConfig `json:"log,omitempty"`
+}
+
+type LogConfig struct {
+	Enable    bool   `json:"enable"`
+	Level     string `json:"level"`
+	Path      string `json:"path"`
+	Filename  string `json:"filename"`
+	Extension string `json:"extension"`
+	Rotation  string `json:"rotation"`
 }
 
 type GeneralResponse struct {
@@ -78,15 +99,16 @@ type GeneralResponse struct {
 	ResponseMessage string `json:"responseMessage"`
 }
 
-type AccessTokenResponse struct {
+type GetB2BAccessTokenResponse struct {
 	GeneralResponse
 	*AccessToken
 }
 
 type AccessToken struct {
-	AccessToken string `json:"accessToken"`
-	TokenType   string `json:"tokenType"`
-	ExpiresIn   int    `json:"expiresIn"`
+	AccessToken           string  `json:"accessToken"`
+	TokenType             string  `json:"tokenType"`
+	ExpiresIn             *int    `json:"expiresIn"`
+	AccessTokenExpiryTime *string `json:"accessTokenExpiryTime"`
 }
 
 type QuickPayResponse struct {
@@ -141,17 +163,15 @@ type GenerateQRISRequest struct {
 	AdditionalInfo     *AdditionalInfo `json:"additionalInfo,omitempty"`
 }
 
-type ApplyTokenResponse struct {
+type CustomerApplyTokenResponse struct {
 	GeneralResponse
-	AccessToken            string                 `json:"accessToken"`
-	TokenType              string                 `json:"tokenType"`
-	AccessTokenExpiryTime  string                 `json:"accessTokenExpiryTime"`
+	*AccessToken
 	RefreshToken           string                 `json:"refreshToken"`
 	RefreshTokenExpiryTime string                 `json:"refreshTokenExpiryTime"`
 	AdditionalInfo         map[string]interface{} `json:"additionalInfo"`
 }
 
-type ApplyOTTResponse struct {
+type CustomerApplyOTTResponse struct {
 	GeneralResponse
 	ResourceType string `json:"resourceType"`
 	Value        string `json:"value"`

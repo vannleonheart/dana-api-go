@@ -7,11 +7,18 @@ import (
 	"strings"
 )
 
-func (c *Client) GetAccessToken() (*AccessTokenResponse, error) {
+func (c *Client) GetB2BAccessToken() (*GetB2BAccessTokenResponse, error) {
 	timestamp := c.getTimestamp()
 	strToSign := fmt.Sprintf("%s|%s", c.Config.ClientId, timestamp)
 	signature, err := c.sign(strToSign)
 	if err != nil {
+		c.log("error", map[string]interface{}{
+			"function":     "GetB2BAccessToken",
+			"message":      "error when sign request",
+			"error":        err.Error(),
+			"stringToSign": strToSign,
+		})
+
 		return nil, err
 	}
 
@@ -27,32 +34,49 @@ func (c *Client) GetAccessToken() (*AccessTokenResponse, error) {
 		"additionalInfo": map[string]string{},
 	}
 
-	requestUrl := fmt.Sprintf("%s/%s", c.Config.BaseUrl, URLAccessToken)
+	requestUrl := fmt.Sprintf("%s/%s", c.Config.ApiUrl, URLAccessToken)
 
-	var result AccessTokenResponse
+	var result GetB2BAccessTokenResponse
 
 	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+		c.log("error", map[string]interface{}{
+			"function": "GetB2BAccessToken",
+			"message":  "error when send http post",
+			"error":    err,
+			"url":      requestUrl,
+			"headers":  requestHeaders,
+			"body":     requestBody,
+		})
+
 		return nil, err
 	}
+
+	c.log("debug", map[string]interface{}{
+		"function": "GetB2BAccessToken",
+		"result":   result,
+		"url":      requestUrl,
+		"headers":  requestHeaders,
+		"body":     requestBody,
+	})
 
 	return &result, nil
 }
 
-func (c *Client) EnsureAccessToken() error {
-	if c.accessToken == nil {
-		accessToken, err := c.GetAccessToken()
+func (c *Client) EnsureB2BAccessToken() error {
+	if c.b2bAccessToken == nil {
+		accessTokenResponse, err := c.GetB2BAccessToken()
 		if err != nil {
 			return err
 		}
-		c.SetAccessToken(accessToken.AccessToken)
+		c.SetB2BAccessToken(accessTokenResponse.AccessToken)
 	}
 
 	return nil
 }
 
-func (c *Client) GetAuthCode(externalId, redirectUrl string, scopes *[]string) (*string, error) {
-	rnd := goutil.NewRandomString("")
-
+func (c *Client) GetCustomerAuthCode(scopes *[]string, redirectUrl string) (*string, *string, error) {
+	externalId := c.getRequestId(nil)
+	state := GenerateRequestId(5, 32, goutil.NumCharset)
 	currentScopes := []string{"PUBLIC_ID", "QUERY_BALANCE", "MINI_DANA"}
 	if scopes != nil {
 		currentScopes = append(currentScopes, *scopes...)
@@ -66,24 +90,43 @@ func (c *Client) GetAuthCode(externalId, redirectUrl string, scopes *[]string) (
 		"merchantId":  c.Config.MerchantId,
 		"scopes":      strings.Join(currentScopes, ","),
 		"redirectUrl": redirectUrl,
-		"state":       rnd.GenerateRange(5, 32),
+		"state":       state,
 	}
 
 	qs, err := goutil.GenerateQueryString(queryParams)
 	if err != nil {
-		return nil, err
+		c.log("error", map[string]interface{}{
+			"function": "GetCustomerAuthCode",
+			"message":  "error when generate query string",
+			"error":    err,
+			"params":   queryParams,
+		})
+
+		return nil, nil, err
 	}
 
 	requestUrl := fmt.Sprintf("%s/%s?%s", c.Config.WebUrl, URLGetAuthCode, *qs)
 
-	return &requestUrl, nil
+	c.log("debug", map[string]interface{}{
+		"function": "GetCustomerAuthCode",
+		"url":      requestUrl,
+	})
+
+	return &externalId, &requestUrl, nil
 }
 
-func (c *Client) ApplyToken(token string, granType *string) (*ApplyTokenResponse, error) {
+func (c *Client) CustomerApplyToken(token string, granType *string) (*CustomerApplyTokenResponse, error) {
 	timestamp := c.getTimestamp()
 	strToSign := fmt.Sprintf("%s|%s", c.Config.ClientId, timestamp)
 	signature, err := c.sign(strToSign)
 	if err != nil {
+		c.log("error", map[string]interface{}{
+			"function":     "CustomerApplyToken",
+			"message":      "error when sign request",
+			"error":        err.Error(),
+			"stringToSign": strToSign,
+		})
+
 		return nil, err
 	}
 
@@ -115,98 +158,168 @@ func (c *Client) ApplyToken(token string, granType *string) (*ApplyTokenResponse
 		"refreshToken": refreshToken,
 	}
 
-	requestUrl := fmt.Sprintf("%s/%s", c.Config.BaseUrl, URLApplyToken)
+	requestUrl := fmt.Sprintf("%s/%s", c.Config.ApiUrl, URLApplyToken)
 
-	var result ApplyTokenResponse
+	var result CustomerApplyTokenResponse
 
 	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+		c.log("error", map[string]interface{}{
+			"function": "CustomerApplyToken",
+			"message":  "error when send http post",
+			"error":    err,
+			"url":      requestUrl,
+			"headers":  requestHeaders,
+			"body":     requestBody,
+		})
+
 		return nil, err
 	}
+
+	c.log("debug", map[string]interface{}{
+		"function": "CustomerApplyToken",
+		"result":   result,
+		"url":      requestUrl,
+		"headers":  requestHeaders,
+		"body":     requestBody,
+	})
 
 	return &result, nil
 }
 
-func (c *Client) ApplyOTT(accessToken, externalId, originHost, ipAddress string) (*ApplyOTTResponse, error) {
+func (c *Client) CustomerApplyOTT(customerAccessToken *AccessToken) (*string, *CustomerApplyOTTResponse, error) {
 	timestamp := c.getTimestamp()
+	externalId := c.getRequestId(nil)
+	accessToken := c.getCustomerAccessToken(customerAccessToken)
 
 	requestBody := map[string]interface{}{
 		"userResources": []string{"OTT"},
 		"additionalInfo": map[string]string{
-			"accessToken": accessToken,
+			"accessToken": accessToken.AccessToken,
 		},
 	}
-	encodeRequestBody := c.encodeRequestData(requestBody)
+
+	encodeRequestBody := EncodeRequestBody(requestBody)
 	strToSign := fmt.Sprintf("%s:%s:%s:%s", http.MethodPost, fmt.Sprintf("/%s", URLApplyOTT), encodeRequestBody, timestamp)
 	signature, err := c.sign(strToSign)
 	if err != nil {
-		return nil, err
+		c.log("error", map[string]interface{}{
+			"function":     "CustomerApplyOTT",
+			"message":      "error when sign request",
+			"error":        err.Error(),
+			"stringToSign": strToSign,
+		})
+
+		return nil, nil, err
 	}
 
 	requestHeaders := map[string]string{
 		"Content-type":           "application/json",
-		"Authorization-Customer": fmt.Sprintf("Bearer %s", accessToken),
+		"Authorization-Customer": fmt.Sprintf("%s %s", accessToken.TokenType, accessToken.AccessToken),
 		"X-TIMESTAMP":            timestamp,
 		"X-SIGNATURE":            *signature,
-		"ORIGIN":                 originHost,
+		"ORIGIN":                 c.getOrigin(),
 		"X-PARTNER-ID":           c.Config.ClientId,
 		"X-EXTERNAL-ID":          externalId,
-		"X-IP-ADDRESS":           ipAddress,
-		"X-DEVICE-ID":            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-		"X-LATITUDE":             DefaultLatitude,
-		"X-LONGITUDE":            DefaultLongitude,
+		"X-IP-ADDRESS":           c.getIpAddress(),
+		"X-DEVICE-ID":            c.getDeviceId(),
+		"X-LATITUDE":             c.getLatitude(),
+		"X-LONGITUDE":            c.getLongitude(),
 		"CHANNEL-ID":             "95221",
 	}
 
-	requestUrl := fmt.Sprintf("%s/%s", c.Config.BaseUrl, URLApplyOTT)
+	requestUrl := fmt.Sprintf("%s/%s", c.Config.ApiUrl, URLApplyOTT)
 
-	var result ApplyOTTResponse
+	var result CustomerApplyOTTResponse
 
 	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
-		return nil, err
+		c.log("error", map[string]interface{}{
+			"function": "CustomerApplyOTT",
+			"message":  "error when send http post",
+			"error":    err,
+			"url":      requestUrl,
+			"headers":  requestHeaders,
+			"body":     requestBody,
+		})
+
+		return nil, nil, err
 	}
 
-	return &result, nil
+	c.log("debug", map[string]interface{}{
+		"function": "CustomerApplyOTT",
+		"result":   result,
+		"url":      requestUrl,
+		"headers":  requestHeaders,
+		"body":     requestBody,
+	})
+
+	return &externalId, &result, nil
 }
 
-func (c *Client) UnbindAccount(accessToken, externalId, originHost, ipAddress string) (*GeneralResponse, error) {
+func (c *Client) CustomerUnbindAccount(customerAccessToken *AccessToken) (*string, *GeneralResponse, error) {
 	timestamp := c.getTimestamp()
+	externalId := c.getRequestId(nil)
+	accessToken := c.getCustomerAccessToken(customerAccessToken)
 
 	requestBody := map[string]interface{}{
 		"merchantId": c.Config.MerchantId,
 		"additionalInfo": map[string]string{
-			"accessToken": accessToken,
+			"accessToken": accessToken.AccessToken,
 		},
 	}
 
-	encodeRequestBody := c.encodeRequestData(requestBody)
+	encodeRequestBody := EncodeRequestBody(requestBody)
 	strToSign := fmt.Sprintf("%s:%s:%s:%s", http.MethodPost, fmt.Sprintf("/%s", URLUnbindToken), encodeRequestBody, timestamp)
 	signature, err := c.sign(strToSign)
 	if err != nil {
-		return nil, err
+		c.log("error", map[string]interface{}{
+			"function":     "CustomerUnbindAccount",
+			"message":      "error when sign request",
+			"error":        err.Error(),
+			"stringToSign": strToSign,
+		})
+
+		return nil, nil, err
 	}
 
 	requestHeaders := map[string]string{
 		"Content-type":           "application/json",
-		"Authorization-Customer": fmt.Sprintf("Bearer %s", accessToken),
+		"Authorization-Customer": fmt.Sprintf("%s %s", accessToken.TokenType, accessToken.AccessToken),
 		"X-TIMESTAMP":            timestamp,
 		"X-SIGNATURE":            *signature,
-		"ORIGIN":                 originHost,
+		"ORIGIN":                 c.getOrigin(),
 		"X-PARTNER-ID":           c.Config.ClientId,
 		"X-EXTERNAL-ID":          externalId,
-		"X-IP-ADDRESS":           ipAddress,
-		"X-DEVICE-ID":            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-		"X-LATITUDE":             DefaultLatitude,
-		"X-LONGITUDE":            DefaultLongitude,
+		"X-IP-ADDRESS":           c.getIpAddress(),
+		"X-DEVICE-ID":            c.getDeviceId(),
+		"X-LATITUDE":             c.getLatitude(),
+		"X-LONGITUDE":            c.getLongitude(),
 		"CHANNEL-ID":             "95221",
 	}
 
-	requestUrl := fmt.Sprintf("%s/%s", c.Config.BaseUrl, URLUnbindToken)
+	requestUrl := fmt.Sprintf("%s/%s", c.Config.ApiUrl, URLUnbindToken)
 
 	var result GeneralResponse
 
 	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
-		return nil, err
+		c.log("error", map[string]interface{}{
+			"function": "CustomerUnbindAccount",
+			"message":  "error when send http post",
+			"error":    err,
+			"url":      requestUrl,
+			"headers":  requestHeaders,
+			"body":     requestBody,
+		})
+
+		return nil, nil, err
 	}
 
-	return &result, nil
+	c.log("debug", map[string]interface{}{
+		"function": "CustomerUnbindAccount",
+		"result":   result,
+		"url":      requestUrl,
+		"headers":  requestHeaders,
+		"body":     requestBody,
+	})
+
+	return &externalId, &result, nil
 }
