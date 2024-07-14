@@ -182,7 +182,7 @@ func (c *Client) QuickPay(currency, amount, referenceNo, productCode, orderTitle
 	return &result, nil
 }
 
-func (c *Client) CancelPayment(referenceNo string) (*CancelPaymentResponse, error) {
+func (c *Client) CancelOrder(referenceNo string) (*CancelOrderRequest, error) {
 	timestamp := c.getTimestamp()
 	requestId := c.getRequestId(nil)
 
@@ -216,7 +216,7 @@ func (c *Client) CancelPayment(referenceNo string) (*CancelPaymentResponse, erro
 
 	requestUrl := fmt.Sprintf("%s/%s", c.Config.ApiUrl, URLCancelPayment)
 
-	var result CancelPaymentResponse
+	var result CancelOrderRequest
 
 	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
 		c.log("error", map[string]interface{}{
@@ -372,4 +372,221 @@ func (c *Client) GenerateQRIS(currency, amount, referenceNo string) (interface{}
 	})
 
 	return &result, nil
+}
+
+func (c *Client) FinishNotify(danaReferenceNo, referenceNo, amount, latestTransactionStatus, createdTime, finishedTime string) (interface{}, error) {
+	timestamp := c.getTimestamp()
+	requestId := c.getRequestId(nil)
+
+	requestBody := map[string]interface{}{
+		"merchantId":                 c.Config.MerchantId,
+		"originalReferenceNo":        danaReferenceNo,
+		"originalPartnerReferenceNo": referenceNo,
+		"amount": map[string]string{
+			"currency": "IDR",
+			"value":    amount,
+		},
+		"latestTransactionStatus": latestTransactionStatus,
+		"createdTime":             createdTime,
+		"finishedTime":            finishedTime,
+	}
+
+	encodeRequestBody := EncodeRequestBody(requestBody)
+	strToSign := fmt.Sprintf("%s:%s:%s:%s", http.MethodPost, fmt.Sprintf("/%s", URLFinishNotify), encodeRequestBody, timestamp)
+	signature, err := c.sign(strToSign)
+	if err != nil {
+		c.log("error", map[string]interface{}{
+			"function":     "FinishNotify",
+			"message":      "error when sign request",
+			"error":        err.Error(),
+			"stringToSign": strToSign,
+		})
+
+		return nil, err
+	}
+
+	requestHeaders := map[string]string{
+		"Content-type":  "application/json",
+		"X-TIMESTAMP":   timestamp,
+		"X-PARTNER-ID":  c.Config.ClientId,
+		"X-EXTERNAL-ID": requestId,
+		"X-SIGNATURE":   *signature,
+		"CHANNEL-ID":    c.getChannelId(),
+		"ORIGIN":        c.getOrigin(),
+	}
+
+	requestUrl := fmt.Sprintf("%s/%s", c.Config.ApiUrl, URLFinishNotify)
+
+	var result interface{}
+
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+		c.log("error", map[string]interface{}{
+			"function": "FinishNotify",
+			"message":  "error when send http post",
+			"error":    err,
+			"url":      requestUrl,
+			"headers":  requestHeaders,
+			"body":     requestBody,
+		})
+
+		return nil, err
+	}
+
+	c.log("debug", map[string]interface{}{
+		"function": "FinishNotify",
+		"result":   result,
+		"url":      requestUrl,
+		"headers":  requestHeaders,
+		"body":     requestBody,
+	})
+
+	return &result, nil
+}
+
+func (c *Client) RefundOrder(orderId, refundId, currency, amount string) (*RefundOrderResponse, error) {
+	timestamp := c.getTimestamp()
+	requestId := c.getRequestId(nil)
+
+	requestBody := map[string]interface{}{
+		"merchantId":                 c.Config.MerchantId,
+		"originalPartnerReferenceNo": orderId,
+		"partnerRefundNo":            refundId,
+		"refundAmount": map[string]string{
+			"currency": currency,
+			"value":    amount,
+		},
+	}
+
+	encodeRequestBody := EncodeRequestBody(requestBody)
+	strToSign := fmt.Sprintf("%s:%s:%s:%s", http.MethodPost, fmt.Sprintf("/%s", URLRefund), encodeRequestBody, timestamp)
+	signature, err := c.sign(strToSign)
+	if err != nil {
+		c.log("error", map[string]interface{}{
+			"function":     "RefundOrder",
+			"message":      "error when sign request",
+			"error":        err.Error(),
+			"stringToSign": strToSign,
+		})
+
+		return nil, err
+	}
+
+	requestHeaders := map[string]string{
+		"Content-type":  "application/json",
+		"X-TIMESTAMP":   timestamp,
+		"X-PARTNER-ID":  c.Config.ClientId,
+		"X-EXTERNAL-ID": requestId,
+		"X-SIGNATURE":   *signature,
+		"CHANNEL-ID":    "95221",
+		"ORIGIN":        c.getOrigin(),
+	}
+
+	requestUrl := fmt.Sprintf("%s/%s", c.Config.ApiUrl, URLRefund)
+
+	var result RefundOrderResponse
+
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+		c.log("error", map[string]interface{}{
+			"function": "RefundOrder",
+			"message":  "error when send http post",
+			"error":    err,
+			"url":      requestUrl,
+			"headers":  requestHeaders,
+			"body":     requestBody,
+		})
+
+		return nil, err
+	}
+
+	c.log("debug", map[string]interface{}{
+		"function": "RefundOrder",
+		"result":   result,
+		"url":      requestUrl,
+		"headers":  requestHeaders,
+		"body":     requestBody,
+	})
+
+	return &result, nil
+}
+
+func (c *Client) TransactionHistory(fromDateTime, toDateTime *string, customerAccessToken *AccessToken) (*string, *TransactionHistoryResponse, error) {
+	timestamp := c.getTimestamp()
+	externalId := c.getRequestId(nil)
+	accessToken := c.getCustomerAccessToken(customerAccessToken)
+
+	if accessToken == nil {
+		return nil, nil, fmt.Errorf("customer access token is required")
+	}
+
+	requestBody := map[string]interface{}{
+		"additionalInfo": map[string]interface{}{
+			"types":       []string{"PAYMENT", "REFUND", "OFFLINE_TOPUP", "TOP_UP", "REBATE"},
+			"statuses":    []string{"SUCCESS", "FAILED", "INIT", "PROCESSING", "CLOSED", "REVOKED"},
+			"accessToken": accessToken.AccessToken,
+		},
+	}
+
+	if fromDateTime != nil {
+		requestBody["fromDateTime"] = *fromDateTime
+	}
+
+	if toDateTime != nil {
+		requestBody["toDateTime"] = *toDateTime
+	}
+
+	encodeRequestBody := EncodeRequestBody(requestBody)
+	strToSign := fmt.Sprintf("%s:%s:%s:%s", http.MethodPost, fmt.Sprintf("/%s", URLTransactionList), encodeRequestBody, timestamp)
+	signature, err := c.sign(strToSign)
+	if err != nil {
+		c.log("error", map[string]interface{}{
+			"function":     "GetCustomerTransactionList",
+			"message":      "error when sign request",
+			"error":        err.Error(),
+			"stringToSign": strToSign,
+		})
+
+		return nil, nil, err
+	}
+
+	requestHeaders := map[string]string{
+		"Content-type":           "application/json",
+		"Authorization-Customer": fmt.Sprintf("%s %s", accessToken.TokenType, accessToken.AccessToken),
+		"X-TIMESTAMP":            timestamp,
+		"X-SIGNATURE":            *signature,
+		"ORIGIN":                 c.getOrigin(),
+		"X-PARTNER-ID":           c.Config.ClientId,
+		"X-EXTERNAL-ID":          externalId,
+		"X-IP-ADDRESS":           c.getIpAddress(),
+		"X-DEVICE-ID":            c.getDeviceId(),
+		"X-LATITUDE":             c.getLatitude(),
+		"X-LONGITUDE":            c.getLongitude(),
+		"CHANNEL-ID":             "95221",
+	}
+
+	requestUrl := fmt.Sprintf("%s/%s", c.Config.ApiUrl, URLTransactionList)
+
+	var result TransactionHistoryResponse
+
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+		c.log("error", map[string]interface{}{
+			"function": "GetCustomerTransactionList",
+			"message":  "error when send http post",
+			"error":    err,
+			"url":      requestUrl,
+			"headers":  requestHeaders,
+			"body":     requestBody,
+		})
+
+		return nil, nil, err
+	}
+
+	c.log("debug", map[string]interface{}{
+		"function": "GetCustomerTransactionList",
+		"result":   result,
+		"url":      requestUrl,
+		"headers":  requestHeaders,
+		"body":     requestBody,
+	})
+
+	return &externalId, &result, nil
 }

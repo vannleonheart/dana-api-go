@@ -2,7 +2,7 @@ package dana
 
 const (
 	defaultTimezone  = "Asia/Jakarta"
-	timestampFormat  = "2006-01-02T15:04:05+07:00"
+	TimestampFormat  = "2006-01-02T15:04:05+07:00"
 	defaultDevideId  = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 	defaultChannelId = "0"
 	defaultMcc       = "412"
@@ -18,6 +18,9 @@ const (
 	URLApplyOTT           = "v1.0/qr/apply-ott.htm"
 	URLUnbindToken        = "v1.0/registration-account-unbinding.htm"
 	URLBalanceInquiry     = "v1.0/balance-inquiry.htm"
+	URLFinishNotify       = "v1.0/debit/notify"
+	URLRefund             = "v1.0/debit/refund.htm"
+	URLTransactionList    = "v1.0/transaction-history-list.htm"
 
 	CurrencyIDR = "IDR"
 
@@ -141,14 +144,22 @@ type CancelPaymentResponse struct {
 
 type QueryPaymentResponse struct {
 	GeneralResponse
-	OriginalPartnerReferenceNo *string `json:"originalPartnerReferenceNo,omitempty"`
-	OriginalReferenceNo        *string `json:"originalReferenceNo,omitempty"`
-	ServiceCode                *string `json:"serviceCode,omitempty"`
-	TransAmount                *Money  `json:"transAmount,omitempty"`
-	TransactionStatusDesc      *string `json:"transactionStatusDesc,omitempty"`
-	Amount                     *Money  `json:"amount,omitempty"`
-	LatestTransactionStatus    *string `json:"latestTransactionStatus,omitempty"`
-	Title                      *string `json:"title,omitempty"`
+	OriginalPartnerReferenceNo *string                 `json:"originalPartnerReferenceNo,omitempty"`
+	OriginalReferenceNo        *string                 `json:"originalReferenceNo,omitempty"`
+	OriginalExternalId         *string                 `json:"originalExternalId,omitempty"`
+	ServiceCode                *string                 `json:"serviceCode,omitempty"`
+	TransAmount                *Money                  `json:"transAmount,omitempty"`
+	TransactionStatusDesc      *string                 `json:"transactionStatusDesc,omitempty"`
+	Amount                     *Money                  `json:"amount,omitempty"`
+	FeeAmount                  *Money                  `json:"feeAmount,omitempty"`
+	LatestTransactionStatus    *string                 `json:"latestTransactionStatus,omitempty"`
+	Title                      *string                 `json:"title,omitempty"`
+	OriginalResponseCode       *string                 `json:"originalResponseCode,omitempty"`
+	OriginalResponseMessage    *string                 `json:"originalResponseMessage,omitempty"`
+	SessionId                  *string                 `json:"sessionId,omitempty"`
+	RequestId                  *string                 `json:"requestId,omitempty"`
+	PaidTime                   *string                 `json:"paidTime,omitempty"`
+	AdditionalInfo             *map[string]interface{} `json:"additionalInfo,omitempty"`
 }
 
 type GenerateQRISRequest struct {
@@ -175,6 +186,48 @@ type CustomerApplyOTTResponse struct {
 	GeneralResponse
 	ResourceType string `json:"resourceType"`
 	Value        string `json:"value"`
+}
+
+type CancelOrderRequest struct {
+	GeneralResponse
+	OriginalReferenceNo        string `json:"originalReferenceNo"`
+	OriginalPartnerReferenceNo string `json:"originalPartnerReferenceNo"`
+	CancelTime                 string `json:"cancelTime"`
+}
+
+type RefundOrderResponse struct {
+	GeneralResponse
+	OriginalPartnerReferenceNo string `json:"originalPartnerReferenceNo"`
+	OriginalReferenceNo        string `json:"originalReferenceNo"`
+	PartnerRefundNo            string `json:"partnerRefundNo"`
+	RefundNo                   string `json:"refundNo"`
+	RefundTime                 string `json:"refundTime"`
+	RefundAmount               Money  `json:"refundAmount"`
+}
+
+type TransactionHistoryResponse struct {
+	GeneralResponse
+	DetailData []struct {
+		ReferenceNo        string `json:"referenceNo"`
+		PartnerReferenceNo string `json:"partnerReferenceNo"`
+		DateTime           string `json:"dateTime"`
+		Amount             Money  `json:"amount"`
+		Type               string `json:"type"`
+		Status             string `json:"status"`
+		SourceOfFunds      []struct {
+			Source string `json:"source"`
+			Amount Money  `json:"amount"`
+		}
+		AdditionalInfo map[string]interface{} `json:"additionalInfo"`
+	} `json:"detailData"`
+	AdditionalInfo *struct {
+		Paginator struct {
+			PageNum    string `json:"pageNum"`
+			PageSize   string `json:"pageSize"`
+			TotalCount string `json:"totalCount"`
+			TotalPage  string `json:"totalPage"`
+		}
+	} `json:"additionalInfo"`
 }
 
 type Money struct {

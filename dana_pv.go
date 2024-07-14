@@ -18,14 +18,14 @@ func (c *Client) getChannelId() string {
 	return defaultChannelId
 }
 
-func (c *Client) getCustomerAccessToken(accessToken *AccessToken) AccessToken {
+func (c *Client) getCustomerAccessToken(accessToken *AccessToken) *AccessToken {
 	if accessToken != nil {
 		c.SetCustomerAccessToken(accessToken)
 	}
 
 	defer c.ClearCustomerAccessToken()
 
-	return *c.customerAccessToken
+	return c.customerAccessToken
 }
 
 func (c *Client) getRequestId(requestId *string) string {
@@ -101,7 +101,7 @@ func (c *Client) getTimestamp() string {
 		now = now.In(loc)
 	}
 
-	return now.Format(timestampFormat)
+	return now.Format(TimestampFormat)
 }
 
 func (c *Client) sign(strToSign string) (*string, error) {
