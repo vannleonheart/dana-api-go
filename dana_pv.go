@@ -156,8 +156,9 @@ func (c *Client) log(level string, data interface{}) {
 		}
 
 		msg := map[string]interface{}{
-			"level": level,
-			"data":  data,
+			"timestamp": c.getTimestamp(),
+			"level":     level,
+			"data":      data,
 		}
 
 		_ = goutil.WriteJsonToFile(msg, c.Config.Log.Path, c.Config.Log.Filename, c.Config.Log.Extension, c.Config.Log.Rotation)
