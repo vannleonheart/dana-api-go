@@ -326,3 +326,15 @@ type PayOptionDetailAdditionalInfo struct {
 	VirtualAccountExpiryTime string  `json:"virtualAccountExpiryTime"`
 	VirtualAccountCode       *string `json:"virtualAccountCode,omitempty"`
 }
+
+type NotificationRequest struct {
+	OriginalReferenceNo        string                  `json:"originalReferenceNo"`
+	OriginalPartnerReferenceNo string                  `json:"originalPartnerReferenceNo"`
+	MerchantId                 string                  `json:"merchantId"`
+	Amount                     Money                   `json:"amount"`
+	TransactionStatusDesc      string                  `json:"transactionStatusDesc"`
+	LatestTransactionStatus    string                  `json:"latestTransactionStatus"`
+	CreatedTime                string                  `json:"createdTime"`
+	FinishedTime               string                  `json:"finishedTime"`
+	AdditionalInfo             *map[string]interface{} `json:"additionalInfo"`
+}
