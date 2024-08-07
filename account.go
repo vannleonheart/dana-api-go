@@ -50,7 +50,7 @@ func (c *Client) CustomerBalanceInquiry(requestId *string, customerAccessToken *
 
 	var result interface{}
 
-	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result, nil); err != nil {
 		c.log("error", map[string]interface{}{
 			"function": "CustomerBalanceInquiry",
 			"message":  "error when send http post",

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/vannleonheart/goutil"
 	"net/http"
+	"time"
 )
 
 func (c *Client) DirectDebitPayment(currency, amount, referenceNo, productCode, orderTitle string, mcc *string, paymentOptions *[]map[string]interface{}, urlParams *[]map[string]string) (*DirectDebitPaymentResponse, error) {
@@ -22,6 +23,7 @@ func (c *Client) DirectDebitPayment(currency, amount, referenceNo, productCode, 
 			"currency": currency,
 			"value":    amount,
 		},
+		"validUpTo": c.getCurrentTime().Add(1 * time.Minute).Format(TimestampFormat),
 		"additionalInfo": map[string]interface{}{
 			"productCode": productCode,
 			"mcc":         currentMcc,
@@ -70,7 +72,7 @@ func (c *Client) DirectDebitPayment(currency, amount, referenceNo, productCode, 
 
 	var result DirectDebitPaymentResponse
 
-	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result, nil); err != nil {
 		c.log("error", map[string]interface{}{
 			"function": "DirectDebitPayment",
 			"message":  "error when send http post",
@@ -158,7 +160,7 @@ func (c *Client) QuickPay(currency, amount, referenceNo, productCode, orderTitle
 
 	var result QuickPayResponse
 
-	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result, nil); err != nil {
 		c.log("error", map[string]interface{}{
 			"function": "QuickPay",
 			"message":  "error when send http post",
@@ -218,7 +220,7 @@ func (c *Client) CancelOrder(referenceNo string) (*CancelOrderRequest, error) {
 
 	var result CancelOrderRequest
 
-	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result, nil); err != nil {
 		c.log("error", map[string]interface{}{
 			"function": "CancelPayment",
 			"message":  "error when send http post",
@@ -279,7 +281,7 @@ func (c *Client) QueryPayment(referenceNo string) (*QueryPaymentResponse, error)
 
 	var result QueryPaymentResponse
 
-	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result, nil); err != nil {
 		c.log("error", map[string]interface{}{
 			"function": "QueryPayment",
 			"message":  "error when send http post",
@@ -350,7 +352,7 @@ func (c *Client) GenerateQRIS(currency, amount, referenceNo string) (interface{}
 
 	var result interface{}
 
-	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result, nil); err != nil {
 		c.log("error", map[string]interface{}{
 			"function": "GenerateQRIS",
 			"message":  "error when send http post",
@@ -419,7 +421,7 @@ func (c *Client) FinishNotify(danaReferenceNo, referenceNo, amount, latestTransa
 
 	var result interface{}
 
-	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result, nil); err != nil {
 		c.log("error", map[string]interface{}{
 			"function": "FinishNotify",
 			"message":  "error when send http post",
@@ -485,7 +487,7 @@ func (c *Client) RefundOrder(orderId, refundId, currency, amount string) (*Refun
 
 	var result RefundOrderResponse
 
-	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result, nil); err != nil {
 		c.log("error", map[string]interface{}{
 			"function": "RefundOrder",
 			"message":  "error when send http post",
@@ -567,7 +569,7 @@ func (c *Client) TransactionHistory(fromDateTime, toDateTime *string, customerAc
 
 	var result TransactionHistoryResponse
 
-	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result, nil); err != nil {
 		c.log("error", map[string]interface{}{
 			"function": "GetCustomerTransactionList",
 			"message":  "error when send http post",

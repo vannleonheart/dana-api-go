@@ -38,7 +38,7 @@ func (c *Client) GetB2BAccessToken() (*GetB2BAccessTokenResponse, error) {
 
 	var result GetB2BAccessTokenResponse
 
-	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result, nil); err != nil {
 		c.log("error", map[string]interface{}{
 			"function": "GetB2BAccessToken",
 			"message":  "error when send http post",
@@ -162,7 +162,7 @@ func (c *Client) CustomerApplyToken(token string, granType *string) (*CustomerAp
 
 	var result CustomerApplyTokenResponse
 
-	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result, nil); err != nil {
 		c.log("error", map[string]interface{}{
 			"function": "CustomerApplyToken",
 			"message":  "error when send http post",
@@ -231,7 +231,7 @@ func (c *Client) CustomerApplyOTT(customerAccessToken *AccessToken) (*string, *C
 
 	var result CustomerApplyOTTResponse
 
-	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result, nil); err != nil {
 		c.log("error", map[string]interface{}{
 			"function": "CustomerApplyOTT",
 			"message":  "error when send http post",
@@ -300,7 +300,7 @@ func (c *Client) CustomerUnbindAccount(customerAccessToken *AccessToken) (*strin
 
 	var result GeneralResponse
 
-	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result); err != nil {
+	if _, err = goutil.SendHttpPost(requestUrl, requestBody, &requestHeaders, &result, nil); err != nil {
 		c.log("error", map[string]interface{}{
 			"function": "CustomerUnbindAccount",
 			"message":  "error when send http post",

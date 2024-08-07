@@ -87,7 +87,7 @@ func (c *Client) getLongitude() string {
 	return lon
 }
 
-func (c *Client) getTimestamp() string {
+func (c *Client) getCurrentTime() time.Time {
 	now := time.Now()
 	currentTimezone := defaultTimezone
 	configTimezone := strings.TrimSpace(c.Config.Timezone)
@@ -101,7 +101,11 @@ func (c *Client) getTimestamp() string {
 		now = now.In(loc)
 	}
 
-	return now.Format(TimestampFormat)
+	return now
+}
+
+func (c *Client) getTimestamp() string {
+	return c.getCurrentTime().Format(TimestampFormat)
 }
 
 func (c *Client) sign(strToSign string) (*string, error) {
