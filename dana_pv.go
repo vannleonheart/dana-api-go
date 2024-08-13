@@ -87,6 +87,20 @@ func (c *Client) getLongitude() string {
 	return lon
 }
 
+func (c *Client) getExpireTime(customExpireTime *int64) string {
+	expireTime := defaultExpireTime
+
+	if c.Config.DefaultExpireTime != nil {
+		expireTime = *c.Config.DefaultExpireTime
+	}
+
+	if customExpireTime != nil {
+		expireTime = *customExpireTime
+	}
+
+	return c.getCurrentTime().Add(time.Duration(expireTime) * time.Minute).Format(TimestampFormat)
+}
+
 func (c *Client) getCurrentTime() time.Time {
 	now := time.Now()
 	currentTimezone := defaultTimezone

@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"github.com/vannleonheart/goutil"
 	"net/http"
-	"time"
 )
 
-func (c *Client) DirectDebitPayment(currency, amount, referenceNo, productCode, orderTitle string, mcc *string, paymentOptions *[]map[string]interface{}, urlParams *[]map[string]string) (*DirectDebitPaymentResponse, error) {
+func (c *Client) DirectDebitPayment(currency, amount, referenceNo, productCode, orderTitle string, mcc *string, expireTime *int64, paymentOptions *[]map[string]interface{}, urlParams *[]map[string]string) (*DirectDebitPaymentResponse, error) {
 	timestamp := c.getTimestamp()
 	requestId := c.getRequestId(nil)
 
@@ -23,7 +22,7 @@ func (c *Client) DirectDebitPayment(currency, amount, referenceNo, productCode, 
 			"currency": currency,
 			"value":    amount,
 		},
-		"validUpTo": c.getCurrentTime().Add(1 * time.Minute).Format(TimestampFormat),
+		"validUpTo": c.getExpireTime(expireTime),
 		"additionalInfo": map[string]interface{}{
 			"productCode": productCode,
 			"mcc":         currentMcc,
@@ -96,7 +95,7 @@ func (c *Client) DirectDebitPayment(currency, amount, referenceNo, productCode, 
 	return &result, nil
 }
 
-func (c *Client) QuickPay(currency, amount, referenceNo, productCode, orderTitle string, mcc *string, paymentOptions *[]map[string]interface{}) (*QuickPayResponse, error) {
+func (c *Client) QuickPay(currency, amount, referenceNo, productCode, orderTitle string, mcc *string, expireTime *int64, paymentOptions *[]map[string]interface{}) (*QuickPayResponse, error) {
 	if err := c.EnsureB2BAccessToken(); err != nil {
 		return nil, err
 	}
@@ -118,6 +117,7 @@ func (c *Client) QuickPay(currency, amount, referenceNo, productCode, orderTitle
 			"currency": currency,
 			"value":    amount,
 		},
+		"validUpTo": c.getExpireTime(expireTime),
 		"additionalInfo": map[string]interface{}{
 			"productCode": productCode,
 			"mcc":         currentMcc,

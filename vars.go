@@ -1,11 +1,12 @@
 package dana
 
 const (
-	defaultTimezone  = "Asia/Jakarta"
-	TimestampFormat  = "2006-01-02T15:04:05+07:00"
-	defaultDevideId  = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-	defaultChannelId = "0"
-	defaultMcc       = "412"
+	defaultTimezone         = "Asia/Jakarta"
+	TimestampFormat         = "2006-01-02T15:04:05+07:00"
+	defaultDevideId         = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+	defaultChannelId        = "0"
+	defaultMcc              = "412"
+	defaultExpireTime int64 = 60
 
 	URLAccessToken        = "v1.0/access-token/b2b.htm"
 	URLQuickPay           = "v1.0/quick-pay.htm"
@@ -81,6 +82,7 @@ type Config struct {
 	FinishPaymentCodeUrl string     `json:"finish_payment_code_url"`
 	FinishRedirectUrl    string     `json:"finish_redirect_url"`
 	Timezone             string     `json:"timezone"`
+	DefaultExpireTime    *int64     `json:"default_expire_time"`
 	Origin               string     `json:"origin"`
 	IpAddress            string     `json:"ip_address"`
 	Latitude             string     `json:"latitude"`
